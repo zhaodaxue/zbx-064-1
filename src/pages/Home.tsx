@@ -7,25 +7,65 @@ import { SceneSetup } from '../three/SceneSetup';
 import { OrbitCamera } from '../three/OrbitCamera';
 import { DougongMesh } from '../three/DougongMesh';
 import { useDisassemblyStore } from '../store/useDisassemblyStore';
-import { Palmtree } from 'lucide-react';
+import { Palmtree, Eye, Loader2 } from 'lucide-react';
+import { PARTS_DATA } from '../data/parts';
+import type { PartId } from '../types';
 
 export default function Home() {
   const next = useDisassemblyStore((s) => s.next);
   const prev = useDisassemblyStore((s) => s.prev);
+  const canControlSteps = useDisassemblyStore((s) => s.canControlSteps());
+  const selectedPart = useDisassemblyStore((s) => s.selectedPart);
+  const isAnimating = useDisassemblyStore((s) => s.isAnimating);
+  const isTransitioning = useDisassemblyStore((s) => s.isTransitioning);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
         e.preventDefault();
-        next();
+        if (canControlSteps) next();
       } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
         e.preventDefault();
-        prev();
+        if (canControlSteps) prev();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [next, prev]);
+  }, [next, prev, canControlSteps]);
+
+  const getStatusIndicator = () => {
+    if (isTransitioning) {
+      return (
+        <>
+          <Loader2 className="w-2 h-2 text-amber-400 animate-spin" />
+          <span className="text-xs text-amber-200/80">正在播放过渡动画...</span>
+        </>
+      );
+    }
+    if (isAnimating) {
+      return (
+        <>
+          <Loader2 className="w-2 h-2 text-amber-400 animate-spin" />
+          <span className="text-xs text-amber-200/80">构件动画中...</span>
+        </>
+      );
+    }
+    if (selectedPart) {
+      const part = PARTS_DATA[selectedPart as PartId];
+      return (
+        <>
+          <Eye className="w-2 h-2 text-sky-400 animate-pulse" />
+          <span className="text-xs text-sky-200/80">正在指认「{part.name}」</span>
+        </>
+      );
+    }
+    return (
+      <>
+        <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+        <span className="text-xs text-amber-200/80">三维场景已就绪</span>
+      </>
+    );
+  };
 
   return (
     <div className="w-full h-full flex flex-col bg-[#1a0f08]">
@@ -63,9 +103,14 @@ export default function Home() {
             <DougongMesh />
           </Canvas>
 
-          <div className="absolute left-4 top-4 flex items-center gap-2 px-3 py-1.5 rounded-lg bg-black/40 backdrop-blur-sm border border-amber-800/30">
-            <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span className="text-xs text-amber-200/80">三维场景已就绪</span>
+          <div className={`absolute left-4 top-4 flex items-center gap-2 px-3 py-1.5 rounded-lg backdrop-blur-sm border ${
+            selectedPart
+              ? 'bg-sky-900/40 border-sky-700/30'
+              : isTransitioning || isAnimating
+              ? 'bg-amber-900/40 border-amber-700/30'
+              : 'bg-black/40 border-amber-800/30'
+          }`}>
+            {getStatusIndicator()}
           </div>
         </main>
 

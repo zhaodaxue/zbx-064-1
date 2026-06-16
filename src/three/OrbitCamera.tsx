@@ -3,38 +3,42 @@ import { useThree, useFrame } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 import * as THREE from 'three';
+import { useDisassemblyStore } from '../store/useDisassemblyStore';
+import { STEP_CAMERA_PRESETS } from '../data/parts';
+import type { StepIndex } from '../types';
 
-interface OrbitCameraProps {
-  initialPosition?: [number, number, number];
-  target?: [number, number, number];
-}
-
-const DEFAULT_POSITION: [number, number, number] = [5.5, 4, 7];
-const DEFAULT_TARGET: [number, number, number] = [0, 0.2, 0];
-
-export function OrbitCamera({
-  initialPosition = DEFAULT_POSITION,
-  target = DEFAULT_TARGET,
-}: OrbitCameraProps) {
+export function OrbitCamera() {
   const { camera, gl } = useThree();
   const controlsRef = useRef<OrbitControlsImpl>(null);
+
+  const cameraTarget = useDisassemblyStore((s) => s.cameraTarget);
+  const cameraTransitionKey = useDisassemblyStore((s) => s.cameraTransitionKey);
+
   const animatingRef = useRef(false);
   const animStartPosRef = useRef(new THREE.Vector3());
   const animTargetPosRef = useRef(new THREE.Vector3());
   const animStartTargetRef = useRef(new THREE.Vector3());
   const animTargetTargetRef = useRef(new THREE.Vector3());
   const animProgressRef = useRef(0);
-  const animDurationRef = useRef(0.6);
+  const animDurationRef = useRef(1.0);
 
-  const resetCamera = useCallback(() => {
+  const startCameraAnimation = useCallback((preset: typeof STEP_CAMERA_PRESETS[StepIndex]) => {
     if (!controlsRef.current) return;
     animStartPosRef.current.copy(camera.position);
-    animTargetPosRef.current.set(...initialPosition);
+    animTargetPosRef.current.set(...preset.position);
     animStartTargetRef.current.copy(controlsRef.current.target);
-    animTargetTargetRef.current.set(...target);
+    animTargetTargetRef.current.set(...preset.target);
     animProgressRef.current = 0;
     animatingRef.current = true;
-  }, [camera, initialPosition, target]);
+  }, [camera]);
+
+  useEffect(() => {
+    startCameraAnimation(cameraTarget);
+  }, [cameraTransitionKey, cameraTarget, startCameraAnimation]);
+
+  const resetCamera = useCallback(() => {
+    startCameraAnimation(STEP_CAMERA_PRESETS[0]);
+  }, [startCameraAnimation]);
 
   useEffect(() => {
     const canvas = gl.domElement;
@@ -81,14 +85,6 @@ export function OrbitCamera({
     }
   });
 
-  useEffect(() => {
-    camera.position.set(...initialPosition);
-    if (controlsRef.current) {
-      controlsRef.current.target.set(...target);
-      controlsRef.current.update();
-    }
-  }, [camera, initialPosition, target]);
-
   return (
     <OrbitControls
       ref={controlsRef}
@@ -98,7 +94,7 @@ export function OrbitCamera({
       maxDistance={18}
       minPolarAngle={Math.PI / 18}
       maxPolarAngle={Math.PI / 2.1}
-      target={target}
+      target={STEP_CAMERA_PRESETS[0].target}
       makeDefault
     />
   );

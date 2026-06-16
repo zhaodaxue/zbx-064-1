@@ -9,9 +9,22 @@ export interface StepData {
   partName?: string;
 }
 
+export interface PartData {
+  id: PartId;
+  name: string;
+  title: string;
+  description: string;
+  relatedStep: StepIndex;
+}
+
 export interface PartOffset {
   position: [number, number, number];
   rotation: [number, number, number];
 }
 
 export type WoodVariant = 'light' | 'medium' | 'dark';
+
+export interface CameraPreset {
+  position: [number, number, number];
+  target: [number, number, number];
+}
